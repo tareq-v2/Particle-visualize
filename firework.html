@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realistic Linear Spark Fireworks</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #0c1445, #1a237e, #311b92);
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            color: white;
+            z-index: 10;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            background: linear-gradient(to right, #ff9800, #ff4081, #03a9f4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto;
+            opacity: 0.8;
+        }
+
+        .canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            z-index: 100;
+            flex-wrap: wrap;
+        }
+
+        .firework-btn {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .firework-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .firework-btn.active {
+            transform: translateY(-5px);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+        }
+
+        .firework-btn:nth-child(1):hover, .firework-btn:nth-child(1).active {
+            background: rgba(255, 152, 0, 0.5);
+        }
+
+        .firework-btn:nth-child(2):hover, .firework-btn:nth-child(2).active {
+            background: rgba(3, 169, 244, 0.5);
+        }
+
+        .firework-btn:nth-child(3):hover, .firework-btn:nth-child(3).active {
+            background: rgba(233, 30, 99, 0.5);
+        }
+
+        .firework-btn:nth-child(4):hover, .firework-btn:nth-child(4).active {
+            background: rgba(76, 175, 80, 0.5);
+        }
+
+        .firework-btn:nth-child(5):hover, .firework-btn:nth-child(5).active {
+            background: rgba(156, 39, 176, 0.5);
+        }
+
+        .firework-btn i {
+            font-size: 1.2rem;
+        }
+
+        .instructions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 250px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+        }
+
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #ff9800;
+        }
+
+        .stars {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .star {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            animation: twinkle var(--duration, 4s) infinite var(--delay, 0s);
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 15px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            z-index: 10;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+        
+        .firework-title {
+            position: absolute;
+            top: 120px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            font-size: 2rem;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        
+        .firework-title.show {
+            opacity: 1;
+        }
+        
+        .ground {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: linear-gradient(to top, rgba(50, 50, 50, 0.8), transparent);
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+    <!-- <div class="header">
+        <h1>Realistic Linear Spark Fireworks</h1>
+        <p class="subtitle">Click on different fireworks types to activate unique designs. Click anywhere to launch!</p>
+    </div> -->
+    
+    <div class="firework-title" id="firework-title">Classic Burst</div>
+    
+    <div class="canvas-container">
+        <canvas id="fireworks-canvas"></canvas>
+    </div>
+    
+    <div class="ground"></div>
+    
+    <div class="controls">
+        <button class="firework-btn active" id="classic">
+            <i>🚀</i> Classic Burst
+        </button>
+        <button class="firework-btn" id="nebula">
+            <i>🌠</i> Cosmic Nebula
+        </button>
+        <button class="firework-btn" id="heart">
+            <i>💖</i> Heart Shape
+        </button>
+        <button class="firework-btn" id="ring">
+            <i>🌀</i> Double Ring
+        </button>
+        <button class="firework-btn" id="willow">
+            <i>🌿</i> Willow
+        </button>
+    </div>
+    
+    <!-- <div class="instructions">
+        <h3>How to Play</h3>
+        <p>1. Click any firework type to activate it</p>
+        <p>2. Click anywhere to launch fireworks</p>
+        <p>3. Watch the realistic linear sparks</p>
+        <p>4. Active firework type is highlighted</p>
+    </div> -->
+    
+    <div class="stars" id="stars"></div>
+    
+    <div class="footer">
+        <p>Created with custom canvas animations | Click anywhere to launch fireworks!</p>
+    </div>
+
+    <script>
+        // Create starry background
+        function createStars() {
+            const container = document.getElementById('stars');
+            const starCount = 150;
+            
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+                
+                // Random star properties
+                const size = Math.random() * 3;
+                const top = Math.random() * 100;
+                const left = Math.random() * 100;
+                const duration = 2 + Math.random() * 5;
+                const delay = Math.random() * 5;
+                
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.top = `${top}%`;
+                star.style.left = `${left}%`;
+                star.style.setProperty('--duration', `${duration}s`);
+                star.style.setProperty('--delay', `${delay}s`);
+                
+                container.appendChild(star);
+            }
+        }
+        
+        // Fireworks functionality
+        let currentType = 'classic';
+        const canvas = document.getElementById('fireworks-canvas');
+        const ctx = canvas.getContext('2d');
+        const title = document.getElementById('firework-title');
+        let fireworks = [];
+        let particles = [];
+        
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        // Firework class
+        class Firework {
+            constructor(x, y, targetX, targetY, type) {
+                this.x = x;
+                this.y = y;
+                this.startX = x;
+                this.startY = y;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.type = type;
+                this.distanceToTarget = Math.hypot(targetX - x, targetY - y);
+                this.distanceTraveled = 0;
+                this.coordinates = [];
+                this.coordinateCount = 3;
+                this.angle = Math.atan2(targetY - y, targetX - x);
+                this.speed = 10;
+                this.friction = 0.99;
+                this.hue = this.getHue();
+                this.brightness = Math.random() * 50 + 50;
+                this.alpha = 1;
+                this.trailLength = 5;
+                
+                while (this.coordinateCount--) {
+                    this.coordinates.push([this.x, this.y]);
+                }
+            }
+            
+            getHue() {
+                switch(this.type) {
+                    case 'classic': return Math.random() * 60;
+                    case 'nebula': return Math.random() * 60 + 200;
+                    case 'heart': return Math.random() * 30 + 330;
+                    case 'ring': return Math.random() * 60 + 100;
+                    case 'willow': return Math.random() * 30 + 40;
+                    default: return Math.random() * 360;
+                }
+            }
+            
+            update() {
+                // Remove last coordinate
+                this.coordinates.pop();
+                
+                // Add current coordinate
+                this.coordinates.unshift([this.x, this.y]);
+                
+                // Move firework
+                this.speed *= this.friction;
+                
+                const vx = Math.cos(this.angle) * this.speed;
+                const vy = Math.sin(this.angle) * this.speed;
+                
+                this.distanceTraveled = Math.hypot(this.x - this.startX, this.y - this.startY);
+                
+                // Calculate distance to target
+                const remainingDistance = Math.hypot(this.targetX - this.x, this.targetY - this.y);
+                
+                // If close enough to target, explode
+                if (remainingDistance < 5 || this.speed < 0.5) {
+                    this.explode();
+                    return false;
+                } else {
+                    // Move firework
+                    this.x += vx;
+                    this.y += vy;
+                    return true;
+                }
+            }
+            
+            explode() {
+                const particleCount = this.getParticleCount();
+                
+                for (let i = 0; i < particleCount; i++) {
+                    particles.push(new Particle(
+                        this.x, 
+                        this.y, 
+                        this.type,
+                        this.hue
+                    ));
+                }
+                
+                // Add sound effect for explosion
+                this.playSound();
+            }
+            
+            getParticleCount() {
+                switch(this.type) {
+                    case 'classic': return 150;
+                    case 'nebula': return 250;
+                    case 'heart': return 200;
+                    case 'ring': return 200;
+                    case 'willow': return 100;
+                    default: return 100;
+                }
+            }
+            
+            playSound() {
+                // Create explosion sound
+                const context = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = context.createOscillator();
+                const gainNode = context.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(context.destination);
+                
+                // Configure sound based on firework type
+                oscillator.type = 'sine';
+                oscillator.frequency.value = 200 + Math.random() * 800;
+                gainNode.gain.value = 0.2;
+                
+                oscillator.start();
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.5);
+                
+                setTimeout(() => {
+                    oscillator.stop();
+                }, 500);
+            }
+            
+            draw() {
+                ctx.beginPath();
+                
+                // Move to last coordinate
+                ctx.moveTo(
+                    this.coordinates[this.coordinates.length - 1][0], 
+                    this.coordinates[this.coordinates.length - 1][1]
+                );
+                
+                // Draw line to current position
+                ctx.lineTo(this.x, this.y);
+                
+                // Create gradient for spark trail
+                const gradient = ctx.createLinearGradient(
+                    this.coordinates[this.coordinates.length - 1][0],
+                    this.coordinates[this.coordinates.length - 1][1],
+                    this.x,
+                    this.y
+                );
+                
+                gradient.addColorStop(0, `hsla(${this.hue}, 100%, ${this.brightness}%, 0)`);
+                gradient.addColorStop(0.1, `hsla(${this.hue}, 100%, ${this.brightness}%, ${this.alpha})`);
+                gradient.addColorStop(0.9, `hsla(${this.hue}, 100%, ${this.brightness}%, ${this.alpha})`);
+                gradient.addColorStop(1, `hsla(${this.hue}, 100%, ${this.brightness}%, 0)`);
+                
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+        }
+        
+        // Particle class for explosion
+        class Particle {
+            constructor(x, y, type, hue) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.hue = hue;
+                this.brightness = Math.random() * 50 + 50;
+                this.coordinates = [];
+                this.coordinateCount = 5;
+                
+                while (this.coordinateCount--) {
+                    this.coordinates.push([this.x, this.y]);
+                }
+                
+                // Set particle properties based on firework type
+                switch(type) {
+                    case 'classic':
+                        this.angle = Math.random() * Math.PI * 2;
+                        this.speed = Math.random() * 10 + 2;
+                        this.friction = 0.95;
+                        this.gravity = 0.2;
+                        break;
+                    case 'nebula':
+                        this.angle = Math.random() * Math.PI * 2;
+                        this.speed = Math.random() * 5 + 1;
+                        this.friction = 0.98;
+                        this.gravity = 0.05;
+                        break;
+                    case 'heart':
+                        // Create heart shape particles
+                        const heartAngle = Math.random() * Math.PI * 2;
+                        const heartRadius = 1 - Math.sin(heartAngle) * Math.sin(heartAngle);
+                        this.angle = heartAngle;
+                        this.speed = Math.random() * 4 + heartRadius * 6;
+                        this.friction = 0.92;
+                        this.gravity = 0.1;
+                        break;
+                    case 'ring':
+                        // Create ring shape particles
+                        this.angle = Math.random() * Math.PI * 2;
+                        this.speed = Math.random() * 8 + 4;
+                        this.friction = 0.96;
+                        this.gravity = 0.15;
+                        break;
+                    case 'willow':
+                        this.angle = Math.random() * Math.PI * 0.4 + Math.PI * 0.8;
+                        this.speed = Math.random() * 5 + 2;
+                        this.friction = 0.97;
+                        this.gravity = 0.5;
+                        break;
+                    default:
+                        this.angle = Math.random() * Math.PI * 2;
+                        this.speed = Math.random() * 10 + 2;
+                        this.friction = 0.95;
+                        this.gravity = 0.2;
+                }
+                
+                this.alpha = 1;
+                this.decay = Math.random() * 0.015 + 0.005;
+            }
+            
+            update() {
+                // Remove last coordinate
+                this.coordinates.pop();
+                
+                // Add current coordinate
+                this.coordinates.unshift([this.x, this.y]);
+                
+                // Slow down particle
+                this.speed *= this.friction;
+                
+                // Apply velocity
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed + this.gravity;
+                
+                // Fade out particle
+                this.alpha -= this.decay;
+                
+                // Remove particle if invisible
+                return this.alpha > this.decay;
+            }
+            
+            draw() {
+                ctx.beginPath();
+                
+                // Draw particle trail
+                ctx.moveTo(
+                    this.coordinates[this.coordinates.length - 1][0], 
+                    this.coordinates[this.coordinates.length - 1][1]
+                );
+                
+                ctx.lineTo(this.x, this.y);
+                
+                // Create gradient for particle trail
+                const gradient = ctx.createLinearGradient(
+                    this.coordinates[this.coordinates.length - 1][0],
+                    this.coordinates[this.coordinates.length - 1][1],
+                    this.x,
+                    this.y
+                );
+                
+                gradient.addColorStop(0, `hsla(${this.hue}, 100%, ${this.brightness}%, 0)`);
+                gradient.addColorStop(0.1, `hsla(${this.hue}, 100%, ${this.brightness}%, ${this.alpha})`);
+                gradient.addColorStop(0.9, `hsla(${this.hue}, 100%, ${this.brightness}%, ${this.alpha})`);
+                gradient.addColorStop(1, `hsla(${this.hue}, 100%, ${this.brightness}%, 0)`);
+                
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 1.5;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+        }
+        
+        // Launch firework at position
+        function launchFirework(x, y) {
+            const groundY = window.innerHeight - 80; // Ground level
+            const targetY = Math.max(100, y); // Minimum height
+            
+            // Show firework title
+            title.textContent = getTitle(currentType);
+            title.classList.add('show');
+            setTimeout(() => title.classList.remove('show'), 2000);
+            
+            fireworks.push(new Firework(
+                x, 
+                groundY, 
+                x, 
+                targetY,
+                currentType
+            ));
+        }
+        
+        function getTitle(type) {
+            switch(type) {
+                case 'classic': return 'Classic Burst';
+                case 'nebula': return 'Cosmic Nebula';
+                case 'heart': return 'Heart Shape';
+                case 'ring': return 'Double Ring';
+                case 'willow': return 'Willow';
+                default: return 'Firework';
+            }
+        }
+        
+        // Animation loop
+        function loop() {
+            // Dark blue background with slight fade for trail effect
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgba(12, 20, 69, 0.2)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalCompositeOperation = 'lighter';
+            
+            // Draw ground
+            ctx.fillStyle = 'rgba(50, 50, 50, 0.5)';
+            ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
+            
+            // Update and draw fireworks
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                if (fireworks[i].update()) {
+                    fireworks[i].draw();
+                } else {
+                    fireworks.splice(i, 1);
+                }
+            }
+            
+            // Update and draw particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                if (particles[i].update()) {
+                    particles[i].draw();
+                } else {
+                    particles.splice(i, 1);
+                }
+            }
+            
+            requestAnimationFrame(loop);
+        }
+        
+        // Change firework type
+        function changeFireworkType(type) {
+            currentType = type;
+            
+            // Update button states
+            document.querySelectorAll('.firework-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(type).classList.add('active');
+        }
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            // Firework type buttons
+            document.querySelectorAll('.firework-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    changeFireworkType(this.id);
+                });
+            });
+            
+            // Click anywhere to launch
+            canvas.addEventListener('click', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                launchFirework(x, y);
+            });
+        }
+        
+        // Initialize everything when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            createStars();
+            setupEventListeners();
+            loop();
+            
+            // Launch sample fireworks on load
+            setTimeout(() => launchFirework(canvas.width/2, canvas.height/3), 500);
+            setTimeout(() => launchFirework(canvas.width/4, canvas.height/2), 1200);
+            setTimeout(() => launchFirework(canvas.width*3/4, canvas.height/2.5), 1900);
+        });
+    </script>
+</body>
+</html>
